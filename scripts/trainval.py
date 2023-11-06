@@ -286,8 +286,8 @@ def main_train(train_dataset, validation_dataset, extra_dataset=None):
 
         train_dataloader = this_train_dataset.make_dataloader(args.batch_size, shuffle=True, drop_last=True, nr_workers=args.data_workers)
 
-        for enum_id in range(args.enums_per_epoch):
-            train_epoch(epoch, trainer, train_dataloader, meters)
+        # for enum_id in range(args.enums_per_epoch):
+        #     train_epoch(epoch, trainer, train_dataloader, meters)
 
         if epoch % args.validation_interval == 0:
             model.eval()

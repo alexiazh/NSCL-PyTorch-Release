@@ -1,5 +1,7 @@
 /data
 /dumps
+data.zip
+val_cvpr.zip
 .DS_Store
 
 # Byte-compiled / optimized / DLL files
