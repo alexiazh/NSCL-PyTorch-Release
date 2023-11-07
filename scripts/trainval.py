@@ -243,7 +243,7 @@ def main_train(train_dataset, validation_dataset, extra_dataset=None):
     if args.evaluate:
         meters.reset()
         model.eval()
-        validate_epoch(0, trainer, validation_dataloader, meters)
+        # validate_epoch(0, trainer, validation_dataloader, meters)
         if extra_dataset is not None:
             validate_epoch(0, trainer, extra_dataloader, meters, meter_prefix='validation_extra')
         logger.critical(meters.format_simple('Validation', {k: v for k, v in meters.avg.items() if v != 0}, compressed=False))
@@ -286,8 +286,8 @@ def main_train(train_dataset, validation_dataset, extra_dataset=None):
 
         train_dataloader = this_train_dataset.make_dataloader(args.batch_size, shuffle=True, drop_last=True, nr_workers=args.data_workers)
 
-        # for enum_id in range(args.enums_per_epoch):
-        #     train_epoch(epoch, trainer, train_dataloader, meters)
+        for enum_id in range(args.enums_per_epoch):
+            train_epoch(epoch, trainer, train_dataloader, meters)
 
         if epoch % args.validation_interval == 0:
             model.eval()
