@@ -14,12 +14,13 @@ Training and evaulating the Neuro-Symbolic Concept Learner.
 Usage: 
 conda activate nscl
 export PATH=/Users/zhou/VILab/NS-CL/Jacinle/bin:$PATH
-jac-crun 0 scripts/trainval_poking.py --desc experiments/clevr/desc_nscl_derender.py --training-target derender --curriculum all --dataset clevr --data-dir /Users/zhou/VILab/NS-CL/NSCL-PyTorch-Release/data/clevr/train --batch-size 3 --epoch 2 --validation-interval 5 --save-interval 5 --data-split 0.95 --use-gpu false --data-workers 0
+jac-crun 0 scripts/trainval_test.py --desc experiments/clevr/desc_nscl_derender.py --training-target derender --curriculum all --dataset clevr --data-dir /Users/zhou/VILab/NS-CL/NSCL-PyTorch-Release/data/clevr/train --batch-size 3 --epoch 2 --validation-interval 5 --save-interval 5 --data-split 0.95 --use-gpu false --data-workers 0
 """
 
 import time
 import os.path as osp
 
+import torch
 import torch.backends.cudnn as cudnn
 import torch.cuda as cuda
 
@@ -176,7 +177,8 @@ def main():
     if args.extra_data_dir is not None:
         extra_dataset = build_dataset(args, configs, args.extra_data_image_root, args.extra_data_scenes_json, args.extra_data_questions_json)
 
-    main_train(train_dataset, validation_dataset, extra_dataset)
+    scenegraph_test()
+    # main_train(train_dataset, validation_dataset, extra_dataset)
 
 def main_train(train_dataset, validation_dataset, extra_dataset=None):
     logger.critical('Building the model.')
@@ -320,7 +322,6 @@ def main_train(train_dataset, validation_dataset, extra_dataset=None):
         break
 
 def backward_check_nan(self, feed_dict, loss, monitors, output_dict):
-    import torch
     for name, param in self.model.named_parameters():
         if param.grad is None:
             continue
@@ -405,6 +406,19 @@ def validate_epoch(epoch, trainer, val_dataloader, meters, meter_prefix='validat
             pbar.update()
 
             end = time.time()
+
+def scenegraph_test():
+    import nscl.nn.scene_graph.scene_graph as sng
+
+    scene_graph = sng.SceneGraph(256, [None, 256, 256], 16)
+    print(scene_graph)
+
+    input = torch.rand(size=(1, 256, 16, 24))
+    objects = torch.rand(size=(1, 4))
+    objects_length = torch.tensor([1])
+
+
+    print(scene_graph.forward(input, objects, objects_length))
 
 
 if __name__ == '__main__':
