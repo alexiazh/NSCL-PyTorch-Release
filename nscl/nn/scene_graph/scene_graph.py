@@ -18,6 +18,7 @@ import torch
 import torch.nn as nn
 import jactorch
 import jactorch.nn as jacnn
+from torchvision.ops import roi_align
 
 from . import functional
 
@@ -30,19 +31,23 @@ class SceneGraph(nn.Module):
     def __init__(self, feature_dim, output_dims, downsample_rate):
         super().__init__()
         self.pool_size = 7
-        self.feature_dim = feature_dim
-        self.output_dims = output_dims
-        self.downsample_rate = downsample_rate
+        self.feature_dim = feature_dim  # 256
+        self.output_dims = output_dims  # [None, 256, 256]
+        self.downsample_rate = downsample_rate  # 16
 
-        self.object_roi_pool = jacnn.PrRoIPool2D(self.pool_size, self.pool_size, 1.0 / downsample_rate)
-        self.context_roi_pool = jacnn.PrRoIPool2D(self.pool_size, self.pool_size, 1.0 / downsample_rate)
-        self.relation_roi_pool = jacnn.PrRoIPool2D(self.pool_size, self.pool_size, 1.0 / downsample_rate)
+        # self.object_roi_pool = jacnn.PrRoIPool2D(self.pool_size, self.pool_size, 1.0 / downsample_rate)
+        # self.context_roi_pool = jacnn.PrRoIPool2D(self.pool_size, self.pool_size, 1.0 / downsample_rate)
+        # self.relation_roi_pool = jacnn.PrRoIPool2D(self.pool_size, self.pool_size, 1.0 / downsample_rate)
 
         if not DEBUG:
+            # (context_feature_extract): Conv2d(256, 256, kernel_size=(1, 1), stride=(1, 1))
             self.context_feature_extract = nn.Conv2d(feature_dim, feature_dim, 1)
+            # (relation_feature_extract): Conv2d(256, 384, kernel_size=(1, 1), stride=(1, 1))
             self.relation_feature_extract = nn.Conv2d(feature_dim, feature_dim // 2 * 3, 1)
 
+            # (object_feature_fuse): Conv2d(512, 256, kernel_size=(1, 1), stride=(1, 1))
             self.object_feature_fuse = nn.Conv2d(feature_dim * 2, output_dims[1], 1)
+            # (relation_feature_fuse): Conv2d(896, 256, kernel_size=(1, 1), stride=(1, 1))
             self.relation_feature_fuse = nn.Conv2d(feature_dim // 2 * 3 + output_dims[1] * 2, output_dims[2], 1)
 
             self.object_feature_fc = nn.Sequential(nn.ReLU(True), nn.Linear(output_dims[1] * self.pool_size ** 2, output_dims[1]))
@@ -56,9 +61,9 @@ class SceneGraph(nn.Module):
                 return rep
 
             self.pool_size = 32
-            self.object_roi_pool = jacnn.PrRoIPool2D(32, 32, 1.0 / downsample_rate)
-            self.context_roi_pool = jacnn.PrRoIPool2D(32, 32, 1.0 / downsample_rate)
-            self.relation_roi_pool = jacnn.PrRoIPool2D(32, 32, 1.0 / downsample_rate)
+            # self.object_roi_pool = jacnn.PrRoIPool2D(32, 32, 1.0 / downsample_rate)
+            # self.context_roi_pool = jacnn.PrRoIPool2D(32, 32, 1.0 / downsample_rate)
+            # self.relation_roi_pool = jacnn.PrRoIPool2D(32, 32, 1.0 / downsample_rate)
             self.context_feature_extract = gen_replicate(2)
             self.relation_feature_extract = gen_replicate(3)
             self.object_feature_fuse = jacnn.Identity()
@@ -112,14 +117,16 @@ class SceneGraph(nn.Module):
                 sub_union_imap = functional.generate_intersection_map(sub_box, union_box, self.pool_size)
                 obj_union_imap = functional.generate_intersection_map(obj_box, union_box, self.pool_size)
 
-            this_context_features = self.context_roi_pool(context_features, torch.cat([batch_ind, image_box], dim=-1))
+            # this_context_features = self.context_roi_pool(context_features, torch.cat([batch_ind, image_box], dim=-1))
+            this_context_features = roi_align(context_features, torch.cat([batch_ind, image_box], dim=-1), (self.pool_size, self.pool_size), 1.0 / self.downsample_rate)
             x, y = this_context_features.chunk(2, dim=1)
             this_object_features = self.object_feature_fuse(torch.cat([
                 self.object_roi_pool(object_features, torch.cat([batch_ind, box], dim=-1)),
                 x, y * box_context_imap
             ], dim=1))
 
-            this_relation_features = self.relation_roi_pool(relation_features, torch.cat([rel_batch_ind, union_box], dim=-1))
+            # this_relation_features = self.relation_roi_pool(relation_features, torch.cat([rel_batch_ind, union_box], dim=-1))
+            this_relation_features = roi_align(relation_features, torch.cat([rel_batch_ind, union_box], dim=-1), (self.pool_size, self.pool_size), 1.0 / self.downsample_rate)
             x, y, z = this_relation_features.chunk(3, dim=1)
             this_relation_features = self.relation_feature_fuse(torch.cat([
                 this_object_features[sub_id], this_object_features[obj_id],

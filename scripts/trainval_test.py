@@ -20,7 +20,6 @@ jac-crun 0 scripts/trainval_test.py --desc experiments/clevr/desc_nscl_derender.
 import time
 import os.path as osp
 
-import torch
 import torch.backends.cudnn as cudnn
 import torch.cuda as cuda
 
@@ -159,9 +158,7 @@ def main():
             args.tb_dir_root = ensure_path(osp.join(args.dump_dir, 'tensorboard'))
             args.tb_dir = ensure_path(osp.join(args.tb_dir_root, args.run_name))
 
-    initialize_dataset(args.dataset)
-
-    
+    initialize_dataset(args.dataset)    
     build_dataset = get_dataset_builder(args.dataset)
     
     dataset = build_dataset(args, configs, args.data_image_root, args.data_scenes_json, args.data_questions_json)
@@ -297,7 +294,7 @@ def main_train(train_dataset, validation_dataset, extra_dataset=None):
         
         for enum_id in range(args.enums_per_epoch):
             train_epoch(epoch, trainer, train_dataloader, meters) # this gets called during train
-            break 
+            break  # TEST
 
         if epoch % args.validation_interval == 0:
             model.eval()
@@ -319,9 +316,10 @@ def main_train(train_dataset, validation_dataset, extra_dataset=None):
         if epoch > int(args.epochs * 0.6):
             trainer.set_learning_rate(args.lr * 0.1)
         
-        break
+        break  # TEST
 
 def backward_check_nan(self, feed_dict, loss, monitors, output_dict):
+    import torch
     for name, param in self.model.named_parameters():
         if param.grad is None:
             continue
@@ -353,7 +351,7 @@ def train_epoch(epoch, trainer, train_dataloader, meters):
 
             # this does 1 forward pass through the model
             # calls the step function in TrainEnv which calls reasoning_v1 train
-            loss, monitors, output_dict, extra_info = trainer.step(feed_dict, cast_tensor=False) 
+            loss, monitors, output_dict, extra_info = trainer.step(feed_dict, cast_tensor=False)
             step_time = time.time() - end; end = time.time()
 
             n = feed_dict['image'].size(0)
@@ -372,7 +370,7 @@ def train_epoch(epoch, trainer, train_dataloader, meters):
             pbar.update()
 
             end = time.time()
-            break
+            break  # TEST
 
     trainer.trigger_event('epoch:after', trainer, epoch)
 
@@ -408,16 +406,18 @@ def validate_epoch(epoch, trainer, val_dataloader, meters, meter_prefix='validat
             end = time.time()
 
 def scenegraph_test():
+    import torch
     import nscl.nn.scene_graph.scene_graph as sng
 
     scene_graph = sng.SceneGraph(256, [None, 256, 256], 16)
+    print("SCENE_GRAPH")
     print(scene_graph)
 
-    input = torch.rand(size=(1, 256, 16, 24)).cuda()
-    objects = torch.rand(size=(1, 4)).cuda()
-    objects_length = torch.tensor([1]).cuda()
+    input = torch.rand(size=(1, 256, 16, 24))
+    objects = torch.rand(size=(1, 4))
+    objects_length = torch.tensor([1])
 
-
+    print("SCENE_GRAPH forward()")
     print(scene_graph.forward(input, objects, objects_length))
 
 
