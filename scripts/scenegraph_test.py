@@ -1,3 +1,10 @@
+"""
+Usage: 
+conda activate nscl
+export PATH=/Users/zhou/VILab/NS-CL/Jacinle/bin:$PATH
+jac-run scripts/scene_graph_test.py
+"""
+
 import torch
 
 import nscl.nn.scene_graph.scene_graph as sng

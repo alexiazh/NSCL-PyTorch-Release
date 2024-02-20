@@ -120,8 +120,13 @@ class SceneGraph(nn.Module):
             # this_context_features = self.context_roi_pool(context_features, torch.cat([batch_ind, image_box], dim=-1))
             this_context_features = roi_align(context_features, torch.cat([batch_ind, image_box], dim=-1), (self.pool_size, self.pool_size), 1.0 / self.downsample_rate)
             x, y = this_context_features.chunk(2, dim=1)
+
+            # this_object_features = self.object_feature_fuse(torch.cat([
+            #     self.object_roi_pool(object_features, torch.cat([batch_ind, box], dim=-1)),
+            #     x, y * box_context_imap
+            # ], dim=1))
             this_object_features = self.object_feature_fuse(torch.cat([
-                self.object_roi_pool(object_features, torch.cat([batch_ind, box], dim=-1)),
+                roi_align(object_features, torch.cat([batch_ind, box], dim=-1), (self.pool_size, self.pool_size), 1.0 / self.downsample_rate),
                 x, y * box_context_imap
             ], dim=1))
 
